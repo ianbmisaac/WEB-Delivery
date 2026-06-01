@@ -10,8 +10,10 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+app.use('/api', require('./routes'));
 
 const start = async () => {
   try {
