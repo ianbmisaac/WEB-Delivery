@@ -1,0 +1,516 @@
+{
+  "info": {
+    "name": "Delivery API",
+    "description": "Colección de pruebas para la API REST del sistema de Delivery.\n\n## Flujo recomendado\n\n1. Ejecutar **Register** o **Login** para obtener un token\n2. El token se guarda automáticamente en la variable `token`\n3. Probar endpoints protegidos (Locals CRUD, Users, Orders)\n4. Probar casos de error (sin token, email duplicado, etc.)\n\n## Variables de colección\n\n- `baseUrl`: URL base de la API (por defecto `http://localhost:3000/api`)\n- `token`: JWT token (se setea automáticamente al hacer login)\n\n## Casos de error incluidos\n\n| Código | Descripción |\n|--------|-------------|\n| 401 | Acceso sin token o token inválido |\n| 400 | Campos obligatorios faltantes |\n| 409 | Email ya registrado |\n| 404 | Recurso no encontrado |",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Autenticación de usuarios. Endpoints públicos.",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nuevo Usuario\",\n  \"email\": \"usuario@ejemplo.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Registra un nuevo usuario con rol 'cliente'.\n\n**Respuestas:**\n- 201: Usuario creado exitosamente\n- 400: Faltan campos obligatorios\n- 409: El email ya está registrado\n- 500: Error del servidor"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.token) {",
+                  "  pm.collectionVariables.set('token', response.token);",
+                  "  console.log('Token guardado:', response.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"usuario@ejemplo.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Inicia sesión y obtiene un token JWT.\n\n**Tests:** El token se guarda automáticamente en la variable `token` de la colección.\n\n**Respuestas:**\n- 200: Login exitoso, devuelve token y datos del usuario\n- 400: Faltan email o contraseña\n- 401: Credenciales inválidas"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Locals",
+      "description": "CRUD de locales/restaurantes. GET son públicos, el resto requiere autenticación.",
+      "item": [
+        {
+          "name": "List all locals",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/locals",
+              "host": ["{{baseUrl}}"],
+              "path": ["locals"]
+            },
+            "description": "Obtiene todos los locales activos (isActive: true).\n\n**Público** — no requiere token.\n\n**Respuestas:**\n- 200: Array de locales"
+          }
+        },
+        {
+          "name": "Get local by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/locals/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["locals", "1"]
+            },
+            "description": "Obtiene un local por su ID, incluyendo sus productos.\n\n**Público** — no requiere token.\n\n**Respuestas:**\n- 200: Datos del local con productos incluidos\n- 404: Local no encontrado"
+          }
+        },
+        {
+          "name": "Create local",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pizzería Ejemplo\",\n  \"description\": \"La mejor pizza de la zona\",\n  \"address\": \"Av. Siempre Viva 123\",\n  \"phone\": \"+54 11 5555-1234\",\n  \"category\": \"Pizzas\",\n  \"openingHours\": \"Lun-Sáb 12:00-23:00, Dom 18:00-23:00\",\n  \"imageUrl\": \"https://ejemplo.com/pizza.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/locals",
+              "host": ["{{baseUrl}}"],
+              "path": ["locals"]
+            },
+            "description": "Crea un nuevo local.\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 201: Local creado\n- 400: Error de validación\n- 401: Token requerido o inválido"
+          }
+        },
+        {
+          "name": "Update local",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pizzería Ejemplo Editada\",\n  \"description\": \"Actualizamos la descripción\",\n  \"phone\": \"+54 11 5555-5678\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/locals/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["locals", "1"]
+            },
+            "description": "Actualiza los datos de un local existente.\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 200: Local actualizado\n- 400: Error de validación\n- 401: Token requerido o inválido\n- 404: Local no encontrado"
+          }
+        },
+        {
+          "name": "Delete local (logical)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locals/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["locals", "1"]
+            },
+            "description": "Eliminación lógica: establece isActive=false. El local ya no aparece en GET /locals.\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 200: Local desactivado\n- 401: Token requerido o inválido\n- 404: Local no encontrado"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Gestión de usuarios. Todos los endpoints requieren autenticación, excepto POST /users.",
+      "item": [
+        {
+          "name": "List all users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "description": "Obtiene todos los usuarios (sin contraseñas).\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 200: Array de usuarios\n- 401: Token requerido o inválido"
+          }
+        },
+        {
+          "name": "Get user by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "1"]
+            },
+            "description": "Obtiene un usuario por su ID (sin contraseña).\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 200: Datos del usuario\n- 401: Token requerido o inválido\n- 404: Usuario no encontrado"
+          }
+        },
+        {
+          "name": "Create user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Usuario Admin\",\n  \"email\": \"admin@ejemplo.com\",\n  \"password\": \"admin123\",\n  \"role\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "description": "Crea un usuario directamente (público, no requiere token).\n\n**Respuestas:**\n- 201: Usuario creado (sin contraseña en respuesta)\n- 400: Faltan campos obligatorios\n- 409: Email ya registrado"
+          }
+        },
+        {
+          "name": "Update user",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Usuario Actualizado\",\n  \"email\": \"nuevo-email@ejemplo.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "1"]
+            },
+            "description": "Actualiza los datos de un usuario.\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 200: Usuario actualizado\n- 400: Error de validación\n- 401: Token requerido o inválido\n- 404: Usuario no encontrado\n- 409: Email ya registrado"
+          }
+        },
+        {
+          "name": "Delete user",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "1"]
+            },
+            "description": "Elimina un usuario físicamente de la base de datos.\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 200: Usuario eliminado\n- 401: Token requerido o inválido\n- 404: Usuario no encontrado"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "description": "Gestión de pedidos. Todos los endpoints requieren autenticación.",
+      "item": [
+        {
+          "name": "List all orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            },
+            "description": "Obtiene todos los pedidos incluyendo usuario, local, items y productos.\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 200: Array de pedidos\n- 401: Token requerido o inválido"
+          }
+        },
+        {
+          "name": "Get active orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "active"]
+            },
+            "description": "Obtiene solo pedidos activos (pendiente, preparando, en_camino).\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 200: Array de pedidos activos\n- 401: Token requerido o inválido"
+          }
+        },
+        {
+          "name": "Get order by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "1"]
+            },
+            "description": "Obtiene un pedido por su ID con todos los detalles.\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 200: Datos del pedido\n- 401: Token requerido o inválido\n- 404: Pedido no encontrado"
+          }
+        },
+        {
+          "name": "Create order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"UserId\": 1,\n  \"LocalId\": 1,\n  \"deliveryAddress\": \"Calle Falsa 456\",\n  \"total\": 25.50,\n  \"notes\": \"Sin cebolla por favor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            },
+            "description": "Crea un nuevo pedido.\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 201: Pedido creado\n- 400: Error de validación\n- 401: Token requerido o inválido"
+          }
+        },
+        {
+          "name": "Update order status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"preparando\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/1/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "1", "status"]
+            },
+            "description": "Actualiza el estado de un pedido.\n\nValores posibles: pendiente, confirmado, preparando, en_camino, entregado, cancelado.\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 200: Estado actualizado\n- 400: Estado inválido\n- 401: Token requerido o inválido\n- 404: Pedido no encontrado"
+          }
+        },
+        {
+          "name": "Delete order",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "1"]
+            },
+            "description": "Elimina un pedido físicamente.\n\n**Requiere autenticación** (token).\n\n**Respuestas:**\n- 200: Pedido eliminado\n- 401: Token requerido o inválido\n- 404: Pedido no encontrado"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Cases",
+      "description": "Casos de error para verificar el manejo de excepciones.",
+      "item": [
+        {
+          "name": "401 — No token provided",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "description": "**Caso de error 401:** Acceder a un endpoint protegido sin enviar token.\n\n**Respuesta esperada:**\n```json\n{\n  \"error\": true,\n  \"message\": \"Token requerido\"\n}\n```"
+          }
+        },
+        {
+          "name": "401 — Invalid token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer token_invalido_12345"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "description": "**Caso de error 401:** Enviar un token JWT inválido o malformado.\n\n**Respuesta esperada:**\n```json\n{\n  \"error\": true,\n  \"message\": \"Token inválido o expirado\"\n}\n```"
+          }
+        },
+        {
+          "name": "400 — Missing fields on register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Usuario sin email\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "**Caso de error 400:** Intentar registrar un usuario sin los campos obligatorios.\n\n**Respuesta esperada:**\n```json\n{\n  \"error\": true,\n  \"message\": \"Todos los campos son obligatorios\"\n}\n```"
+          }
+        },
+        {
+          "name": "409 — Duplicate email on register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Usuario Duplicado\",\n  \"email\": \"usuario@ejemplo.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "**Caso de error 409:** Registrar un usuario con un email que ya existe en la BD.\n\nEjecutar primero el request **Register** para crear el usuario, luego ejecutar este para obtener el 409.\n\n**Respuesta esperada:**\n```json\n{\n  \"error\": true,\n  \"message\": \"El email ya está registrado\"\n}\n```"
+          }
+        },
+        {
+          "name": "404 — Local not found",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/locals/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["locals", "99999"]
+            },
+            "description": "**Caso de error 404:** Solicitar un recurso que no existe.\n\n**Respuesta esperada:**\n```json\n{\n  \"error\": true,\n  \"message\": \"Local no encontrado\"\n}\n```"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

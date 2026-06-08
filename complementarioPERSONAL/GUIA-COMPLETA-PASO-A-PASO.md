@@ -2,7 +2,7 @@
 
 > **Alumno:** Ian Barria Mercado  
 > **Tema:** #15 — Pedidos Delivery  
-> **Stack:** React 18 + Vite · Node + Express + Sequelize · PostgreSQL · JWT · Railway + Vercel  
+> **Stack:** React 19 + Vite 8 · Node + Express 5 + Sequelize 6 · PostgreSQL · JWT · Railway + Vercel  
 > **Total requisitos:** 23 (13 GEN + 10 rq)
 
 ---
@@ -26,58 +26,52 @@ Crear la estructura del repositorio, inicializar backend y frontend, conectar la
 
 ### Paso 1: Crear el repositorio en GitHub
 
-1. Abrí [github.com](https://github.com) e iniciá sesión con tu cuenta (ianbmisaac).
-2. Hacé clic en el botón verde **"New"** (o andá a https://github.com/new).
+1. Andá a [github.com](https://github.com) e iniciá sesión.
+2. Hacé clic en el botón verde **"New"**.
 3. **Repository name:** `WEB-Delivery`
-4. **Description:** (opcional) "Sistema web para gestión de pedidos de delivery — Proyecto académico"
+4. **Description:** "Sistema web para gestión de pedidos de delivery — Proyecto académico"
 5. Dejalo en **Public**.
 6. **No** marcar "Add a README", "Add .gitignore" ni "Choose a license".
 7. Hacé clic en **"Create repository"**.
 
 ### Paso 2: Clonar el repositorio en tu máquina
 
-Abrí la terminal en VS Code (`` Ctrl + ò `` o `Terminal > New Terminal`).
-
 ```bash
-cd ~/Documentos/GitHub
+cd C:\Users\Yan\Documents\GitHub
 git clone https://github.com/ianbmisaac/WEB-Delivery.git
 cd WEB-Delivery
 ```
 
 ### Paso 3: Crear la estructura de carpetas
 
-Dentro del proyecto, creá las carpetas principales:
-
 ```bash
-mkdir -p Delivery/back Delivery/front datos\ del\ proyecto PlanificacionPERSONAL
+mkdir -p Delivery\back Delivery\front "datos del proyecto" complementarioPERSONAL
 ```
 
 ### Paso 4: Inicializar el backend
 
 ```bash
-cd Delivery/back
+cd Delivery\back
 npm init -y
 ```
 
-Esto crea un `package.json` con valores por defecto.
-
-Ahora instalamos las dependencias necesarias:
+Instalar las dependencias:
 
 ```bash
-npm install express cors dotenv sequelize pg pg-hstore
+npm install express cors dotenv sequelize pg pg-hstore bcryptjs jsonwebtoken
 npm install --save-dev nodemon sequelize-cli
 ```
 
-**Explicación de cada dependencia:**
-
 | Dependencia | ¿Para qué sirve? |
 |-------------|------------------|
-| `express` | Framework web para crear el servidor y las rutas API |
-| `cors` | Permite que el frontend (en otro puerto) pueda llamar a la API |
-| `dotenv` | Lee variables del archivo `.env` y las pone en `process.env` |
-| `sequelize` | ORM para conectar y operar la base de datos PostgreSQL |
-| `pg` + `pg-hstore` | Drivers para que Sequelize pueda hablar con PostgreSQL |
-| `nodemon` (dev) | Reinicia el servidor automáticamente cuando cambia un archivo |
+| `express` | Framework web para crear el servidor y rutas API |
+| `cors` | Permite que el frontend (otro puerto) llame a la API |
+| `dotenv` | Lee variables del archivo `.env` |
+| `sequelize` | ORM para conectar y operar PostgreSQL |
+| `pg` + `pg-hstore` | Drivers para que Sequelize hable con PostgreSQL |
+| `bcryptjs` | Hashea contraseñas |
+| `jsonwebtoken` | Crea y verifica tokens JWT |
+| `nodemon` (dev) | Reinicia el servidor automáticamente al cambiar archivos |
 | `sequelize-cli` (dev) | Herramienta de línea de comandos para migraciones |
 
 ### Paso 5: Configurar Sequelize CLI
@@ -86,119 +80,144 @@ npm install --save-dev nodemon sequelize-cli
 npx sequelize-cli init
 ```
 
-Esto va a crear las carpetas `config/`, `models/`, `migrations/` y `seeders/`.
+Esto crea: `config/`, `models/`, `migrations/`, `seeders/`.
 
-Pero ojo: Sequelize CLI por defecto genera `config/config.json`, y nosotros vamos a usar un archivo `.js` para poder leer variables de entorno. Así que:
-
-1. Borrá el `config/config.json` que se generó.
-2. Creá `config/config.js` con este contenido:
+Borrá `config\config.json` y creá `config\config.js`:
 
 ```javascript
 require('dotenv').config();
 
 module.exports = {
   development: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT),
+    username: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'delivery_db',
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT) || 5432,
     dialect: 'postgres',
   },
   test: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT),
+    username: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'delivery_db',
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT) || 5432,
     dialect: 'postgres',
   },
   production: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT),
+    use_env_variable: 'DATABASE_URL',
     dialect: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false,
+      },
+    },
   },
 };
 ```
 
-Después, editá `models/index.js` para que cargue `config/config.js` en vez de `config/config.json`. Buscá esta línea:
+Editá `models/index.js` y cambiá esta línea:
 
 ```javascript
 const config = require(__dirname + '/../config/config.json')[env];
 ```
 
-y cambiala por:
+por:
 
 ```javascript
 const config = require(__dirname + '/../config/config.js')[env];
 ```
 
-> **¿Por qué?** El archivo `.js` nos permite usar `dotenv` para leer variables de entorno, mientras que `.json` no puede ejecutar código. Es una decisión técnica común en proyectos con Sequelize.
+### Paso 6: Crear el archivo .env y .env.example
 
-### Paso 6: Crear el archivo .env
+Creá `Delivery\back\.env`:
 
-```bash
-cp .env.example .env   # (todavía no existe, lo creamos)
-```
-
-Pero antes tenemos que crearlo. Escribí esto en `.env`:
-
-```
+```env
+DATABASE_URL=postgresql://postgres@localhost:5432/delivery_db
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=delivery_db
-DB_USER=delivery_user
-DB_PASSWORD=tu_password_segura
+DB_USER=postgres
+DB_PASSWORD=
+
+JWT_SECRET=dev_secret_no_usar_en_produccion_12345
+
+PORT=3000
+NODE_ENV=development
+
+CORS_ORIGIN=http://localhost:5173
+
+VITE_API_URL=http://localhost:3000/api
 ```
 
-Y también creá `.env.example` con los mismos valores pero con comentarios (sin la contraseña real):
+Creá `Delivery\back\.env.example` (sin secretos):
 
-```
-# PostgreSQL
-DB_HOST=localhost        # Host de la base de datos
-DB_PORT=5432             # Puerto de PostgreSQL
-DB_NAME=delivery_db      # Nombre de la base de datos
-DB_USER=delivery_user    # Usuario de la base de datos
-DB_PASSWORD=             # Contraseña del usuario (completar localmente)
-```
+```env
+# === Base de datos PostgreSQL ===
+DATABASE_URL=postgresql://usuario:password@localhost:5432/delivery_db
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=delivery_db
+DB_USER=postgres
+DB_PASSWORD=
 
-### Paso 7: Configurar la base de datos local
+# === Seguridad JWT ===
+JWT_SECRET=cambia_esto_por_un_secreto_seguro
 
-Asegurate de tener PostgreSQL funcionando. En Linux:
+# === Servidor ===
+PORT=3000
+NODE_ENV=development
 
-```bash
-sudo systemctl start postgresql
-sudo -u postgres psql
-```
+# === CORS ===
+CORS_ORIGIN=http://localhost:5173
 
-Dentro de PostgreSQL, creá el usuario y la base de datos:
-
-```sql
-CREATE USER delivery_user WITH PASSWORD 'tu_password_segura';
-CREATE DATABASE delivery_db OWNER delivery_user;
-\q
+# === URL de la API para el frontend ===
+VITE_API_URL=http://localhost:3000/api
 ```
 
-**Explicación:** El motor de base de datos PostgreSQL necesita un usuario (quien se conecta) y una base de datos (dónde se guardan los datos). Estos valores tienen que coincidir con los del `.env`.
+### Paso 7: Editar package.json (scripts)
 
-### Paso 8: Editar package.json (scripts)
-
-Abrí `Delivery/back/package.json` y en la sección `"scripts"` agregá:
+En `Delivery\back\package.json`, dejá los scripts así:
 
 ```json
 "scripts": {
   "start": "node app.js",
   "dev": "nodemon app.js",
-  "test": "echo \"Error: no test specified\" && exit 1"
+  "db:migrate": "npx sequelize-cli db:migrate",
+  "db:migrate:undo": "npx sequelize-cli db:migrate:undo:all",
+  "db:seed": "npx sequelize-cli db:seed:all"
 }
 ```
 
-### Paso 9: Crear el archivo principal del servidor (app.js)
+### Paso 8: Configurar PostgreSQL
 
-Creá `Delivery/back/app.js`:
+Verificá que PostgreSQL esté instalado y el servicio corriendo:
+
+```powershell
+# Verificar servicio
+Get-Service -Name postgresql*
+# Verificar que acepta conexiones
+& "C:\Program Files\PostgreSQL\18\bin\pg_isready.exe"
+```
+
+Crear la base de datos:
+
+```powershell
+& "C:\Program Files\PostgreSQL\18\bin\createdb.exe" -U postgres delivery_db
+```
+
+### Paso 9: Crear la estructura de rutas
+
+Crear las carpetas necesarias:
+
+```bash
+mkdir Delivery\back\routes Delivery\back\controllers Delivery\back\middlewares
+```
+
+### Paso 10: Crear el archivo principal del servidor (app.js)
+
+Creá `Delivery\back\app.js`:
 
 ```javascript
 require('dotenv').config();
@@ -213,7 +232,20 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.use('/api', require('./routes'));
+
+// Middleware de error global
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: true, message: 'Error interno del servidor' });
+});
+
+// 404 para rutas no encontradas
+app.use((req, res) => {
+  res.status(404).json({ error: true, message: 'Ruta no encontrada' });
 });
 
 const start = async () => {
@@ -234,39 +266,79 @@ start();
 module.exports = app;
 ```
 
-**Explicación línea por línea:**
+### Paso 11: Crear .sequelizerc
 
-- `require('dotenv').config()` — Carga las variables del `.env` para usarlas en todo el proyecto.
-- `express()` — Crea la aplicación Express (nuestro servidor web).
-- `cors()` — Middleware que permite que el frontend (en otro puerto/origen) haga peticiones.
-- `express.json()` — Middleware que convierte automáticamente el body de las requests a JSON.
-- `GET /api/health` — Endpoint de prueba para verificar que el servidor funciona.
-- `sequelize.authenticate()` — Prueba la conexión a la base de datos.
-- `app.listen()` — Arranca el servidor en el puerto indicado.
+Creá `Delivery\back\.sequelizerc`:
 
-### Paso 10: Crear el modelo User y su migración
+```javascript
+const path = require('path');
+
+module.exports = {
+  config: path.resolve('config', 'config.js'),
+  'models-path': path.resolve('models'),
+  'migrations-path': path.resolve('migrations'),
+  'seeders-path': path.resolve('seeders'),
+};
+```
+
+### Paso 12: Crear el modelo User y su migración
 
 ```bash
+cd Delivery\back
 npx sequelize-cli model:generate --name User --attributes name:string,email:string,password:string,role:string
 ```
 
-Este comando hace dos cosas:
-1. Crea el archivo `models/user.js` con la definición del modelo.
-2. Crea un archivo de migración en `migrations/` con la estructura de la tabla.
-
-**Explicación:** Una migración es como un "control de versiones" para la base de datos. Te permite crear, modificar o eliminar tablas de forma ordenada y reproducible. Si otro desarrollador (o vos en otra máquina) ejecuta `db:migrate`, va a tener exactamente la misma estructura.
-
-### Paso 11: Ejecutar la migración
+Renombrá la migración generada para controlar el orden:
 
 ```bash
-npx sequelize-cli db:migrate
+cd migrations
+ren 202*create-user.js 01-create-user.js
 ```
 
-Si todo sale bien, vas a ver que la tabla `Users` se creó en PostgreSQL.
+Editá `models\user.js` para agregar asociaciones y validaciones:
 
-### Paso 12: Crear .gitignore en la raíz del proyecto
+```javascript
+'use strict';
+const { Model } = require('sequelize');
+module.exports = (sequelize, DataTypes) => {
+  class User extends Model {
+    static associate(models) {
+      User.hasMany(models.Order, { foreignKey: 'UserId' });
+      User.hasMany(models.Local, { foreignKey: 'UserId' });
+    }
+  }
+  User.init({
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { notEmpty: true }
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: { isEmail: true }
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { notEmpty: true }
+    },
+    role: {
+      type: DataTypes.STRING,
+      defaultValue: 'cliente'
+    }
+  }, {
+    sequelize,
+    modelName: 'User',
+  });
+  return User;
+};
+```
 
-En la carpeta raíz `WEB-Delivery/`, creá un archivo `.gitignore`:
+### Paso 13: Crear .gitignore en la raíz del proyecto
+
+En `WEB-Delivery\.gitignore`:
 
 ```
 # Node
@@ -291,12 +363,10 @@ Thumbs.db
 .vscode/
 ```
 
-> **¿Por qué?** `node_modules/` pesa muchísimo y no debería subirse a GitHub (se regenera con `npm install`). `.env` contiene credenciales secretas. Todo lo que se pueda regenerar no se versiona.
-
-### Paso 13: Inicializar el frontend con Vite + React
+### Paso 14: Inicializar el frontend con Vite + React
 
 ```bash
-cd ~/Documentos/GitHub/WEB-Delivery/Delivery/front
+cd Delivery\front
 npm create vite@latest . -- --template react
 ```
 
@@ -304,20 +374,40 @@ Cuando pregunte, confirmá con Enter. Después:
 
 ```bash
 npm install
+npm install axios react-router-dom
 ```
 
-Esto instala React, Vite y sus dependencias. El proyecto front ya está listo.
+### Paso 15: Configurar el enrutador de rutas (routes/index.js)
 
-### Paso 14: Verificar que todo funciona
+Creá `Delivery\back\routes\index.js`:
+
+```javascript
+'use strict';
+const router = require('express').Router();
+
+router.get('/', (req, res) => {
+  res.json({ message: 'API Delivery v1' });
+});
+
+router.use('/auth', require('./auth'));
+router.use('/users', require('./users'));
+router.use('/locals', require('./locals'));
+router.use('/orders', require('./orders'));
+
+module.exports = router;
+```
+
+### Paso 16: Verificar que todo funciona
 
 **Backend:**
 
 ```bash
-cd ~/Documentos/GitHub/WEB-Delivery/Delivery/back
+cd Delivery\back
+npm run db:migrate
 npm run dev
 ```
 
-Vas a ver en la terminal:
+Vas a ver:
 
 ```
 Conexión a BD establecida correctamente.
@@ -327,29 +417,26 @@ Servidor corriendo en http://localhost:3000
 **Frontend** (en otra terminal):
 
 ```bash
-cd ~/Documentos/GitHub/WEB-Delivery/Delivery/front
+cd Delivery\front
 npm run dev
 ```
 
 Vas a ver:
+
 ```
-VITE v6.x.x  ready in XXX ms
+VITE v8.x.x  ready in XXX ms
 Local:   http://localhost:5173/
 ```
 
-### Paso 15: Hacer commit del Hito 0
+### Paso 17: Hacer commit del Hito 0
 
 ```bash
-cd ~/Documentos/GitHub/WEB-Delivery
+cd C:\Users\Yan\Documents\GitHub\WEB-Delivery
 git add .
 git commit -m "Hito 0: estructura inicial del proyecto"
 git tag -a entrega-hito-0 -m "Hito 0: inicio del proyecto"
 git push origin main --tags
 ```
-
-### Paso 16: Completar el informe de inicio
-
-Usá la plantilla en `datos del proyecto/plantillas/plantilla-informe-hito.md`. Completá con tus datos, marcá Hito 0 y describí lo que hiciste. Guardalo como `informe-hito-0.md` en la raíz del proyecto.
 
 ---
 
@@ -357,113 +444,92 @@ Usá la plantilla en `datos del proyecto/plantillas/plantilla-informe-hito.md`. 
 
 ### Objetivo
 
-Tener al menos 5 requisitos desarrollados: GEN-01, GEN-02, GEN-03, rq-01, rq-02.
+Tener al menos 5 requisitos: GEN-01, GEN-02, GEN-03, rq-01, rq-02.
 
----
+### GEN-01: Estructura del repositorio y README
 
-### GEN-01: Estructura del repositorio y README (✓ ya hecho en Hito 0)
-
-En este punto ya tenés:
-- README.md con descripción, stack, instrucciones de instalación y ejecución.
-- `.gitignore` que excluye `node_modules/`, `.env`, `dist/`, `build/`.
+Ya está hecho desde el Hito 0. Verificá que:
+- `README.md` tenga descripción, stack, instrucciones de instalación y ejecución.
+- `.gitignore` excluya `node_modules/`, `.env`, `dist/`.
 - Estructura `Delivery/back/` + `Delivery/front/` visible.
-- Sin secretos en el repo (`.env` está en `.gitignore`).
+- No haya secretos en el repo (el `.env` está en `.gitignore`).
 
-Solo asegurate de que el README esté completo y se vea profesional.
+### GEN-02: Variables de entorno
 
-### GEN-02: Variables de entorno y .env.example (✓ ya hecho en Hito 0)
-
-Verificá que:
+Ya está hecho. Verificá que:
 - `.env.example` exista en `Delivery/back/` con comentarios.
 - `.env` esté en `.gitignore`.
-- El README tenga una sección "Variables de Entorno" con tabla explicativa.
+- El README tenga tabla de variables de entorno.
 
-### GEN-03: Conexión a BD y migraciones (✓ ya hecho en Hito 0)
+### GEN-03: BD y migraciones
 
-Verificá que:
-- La conexión se verifique al arrancar la API (lo hace `app.js`).
+Ya está hecho. Verificá que:
+- La conexión se verifique al arrancar la API.
 - Las migraciones estén en `migrations/`.
-- El README indique el comando `npx sequelize-cli db:migrate`.
+- El README indique el comando `npm run db:migrate`.
 
 ### rq-01: Modelo Local (entidad principal)
 
 **¿Qué es?** Un Local es un restaurante o comercio que ofrece productos para delivery.
 
-**Paso 1: Crear el modelo y migración**
+Crear el modelo y migración:
 
 ```bash
-cd ~/Documentos/GitHub/WEB-Delivery/Delivery/back
-npx sequelize-cli model:generate --name Local --attributes name:string,address:string,phone:string,category:string,openingHours:string,image:string,active:boolean
+cd Delivery\back
+npx sequelize-cli model:generate --name Local --attributes name:string,address:string,phone:string,category:string,openingHours:string,imageUrl:string,isActive:boolean
 ```
 
-**Paso 2: Ejecutar la migración**
+Renombrar la migración:
 
 ```bash
-npx sequelize-cli db:migrate
+cd migrations
+ren 202*create-local.js 02-create-local.js
 ```
 
-Esto crea la tabla `Locals` en la base de datos. Fijate que Sequelize agrega automáticamente `id`, `createdAt` y `updatedAt`.
-
-**Explicación del modelo:**
-
-| Campo | Tipo | ¿Para qué sirve? |
-|-------|------|------------------|
-| `name` | STRING | Nombre del local/restaurante (ej: "Pizza Hut") |
-| `address` | STRING | Dirección física del local |
-| `phone` | STRING | Teléfono de contacto |
-| `category` | STRING | Categoría (ej: "pizza", "hamburguesa", "china") |
-| `openingHours` | STRING | Horario de atención (ej: "10:00-22:00") |
-| `image` | STRING | URL de la imagen del local |
-| `active` | BOOLEAN | Si el local está activo o desactivado |
-
-### rq-02: Modelo Order + OrderItem (entidad secundaria)
-
-**¿Qué es?** Un Pedido (Order) es la solicitud que hace un cliente. Cada pedido puede tener varios items (OrderItem) que son los productos que pidió.
-
-**Paso 1: Crear modelo Product** (porque OrderItem necesita referenciar un producto)
-
-```bash
-npx sequelize-cli model:generate --name Product --attributes name:string,description:text,price:decimal,image:string,LocalId:integer
-```
-
-**Paso 2: Crear modelo Order**
-
-```bash
-npx sequelize-cli model:generate --name Order --attributes UserId:integer,LocalId:integer,status:string,total:decimal,deliveryAddress:string,deliveryFee:decimal,DelivererId:integer,estimatedDelivery:date
-```
-
-**Paso 3: Crear modelo OrderItem**
-
-```bash
-npx sequelize-cli model:generate --name OrderItem --attributes OrderId:integer,ProductId:integer,quantity:integer,unitPrice:decimal
-```
-
-**Paso 4: Crear modelo Deliverer**
-
-```bash
-npx sequelize-cli model:generate --name Deliverer --attributes name:string,phone:string,email:string,vehicle:string,active:boolean,latitude:float,longitude:float
-```
-
-**Paso 5: Ejecutar todas las migraciones**
-
-```bash
-npx sequelize-cli db:migrate
-```
-
-**Paso 6: Definir las asociaciones entre modelos**
-
-Abrí cada modelo y agregá las relaciones.
-
-En `models/local.js`, dentro de `static associate(models)`:
+Agregar asociaciones en `models\local.js`:
 
 ```javascript
 static associate(models) {
+  Local.belongsTo(models.User, { foreignKey: 'UserId' });
   Local.hasMany(models.Product, { foreignKey: 'LocalId' });
   Local.hasMany(models.Order, { foreignKey: 'LocalId' });
 }
 ```
 
-En `models/product.js`:
+Agregar validaciones a los campos en el `Local.init()`:
+
+```javascript
+name: {
+  type: DataTypes.STRING,
+  allowNull: false,
+  validate: { notEmpty: true }
+},
+address: {
+  type: DataTypes.STRING,
+  allowNull: false,
+  validate: { notEmpty: true }
+},
+phone: DataTypes.STRING,
+imageUrl: DataTypes.STRING,
+category: DataTypes.STRING,
+openingHours: DataTypes.STRING,
+isActive: {
+  type: DataTypes.BOOLEAN,
+  defaultValue: true
+}
+```
+
+### rq-02: Modelo Order + OrderItem + Product + Deliverer
+
+**Product:**
+
+```bash
+npx sequelize-cli model:generate --name Product --attributes name:string,description:text,price:decimal,stock:integer,imageUrl:string,category:string
+```
+
+Renombrar: `202*create-product.js` → `03-create-product.js`
+
+En `models\product.js`:
 
 ```javascript
 static associate(models) {
@@ -472,7 +538,17 @@ static associate(models) {
 }
 ```
 
-En `models/order.js`:
+**Order:**
+
+```bash
+npx sequelize-cli model:generate --name Order --attributes status:enum:{pendiente,confirmado,preparando,en_camino,entregado,cancelado},total:decimal,deliveryAddress:string,deliveryLat:float,deliveryLng:float,notes:text,estimatedDeliveryTime:date,deliveredAt:date
+```
+
+Renombrar: `202*create-order.js` → `04-create-order.js`
+
+Agregar manualmente en la migración las columnas `UserId` y `LocalId` con sus foreign keys.
+
+En `models\order.js`:
 
 ```javascript
 static associate(models) {
@@ -483,7 +559,17 @@ static associate(models) {
 }
 ```
 
-En `models/orderitem.js`:
+**OrderItem:**
+
+```bash
+npx sequelize-cli model:generate --name OrderItem --attributes quantity:integer,price:decimal,subtotal:decimal
+```
+
+Renombrar: `202*create-order-item.js` → `05-create-order-item.js`
+
+Agregar foreign keys `OrderId` y `ProductId` en la migración.
+
+En `models\orderitem.js`:
 
 ```javascript
 static associate(models) {
@@ -492,7 +578,15 @@ static associate(models) {
 }
 ```
 
-En `models/deliverer.js`:
+**Deliverer:**
+
+```bash
+npx sequelize-cli model:generate --name Deliverer --attributes name:string,phone:string,email:string,vehicle:string,active:boolean,latitude:float,longitude:float
+```
+
+Renombrar: `202*create-deliverer.js` → `06-create-deliverer.js`
+
+En `models\deliverer.js`:
 
 ```javascript
 static associate(models) {
@@ -500,35 +594,45 @@ static associate(models) {
 }
 ```
 
-En `models/user.js`:
+Agregar `DelivererId` a Orders con una migración aparte:
 
-```javascript
-static associate(models) {
-  User.hasMany(models.Order, { foreignKey: 'UserId' });
-}
+```bash
+npx sequelize-cli migration:generate --name add-deliverer-id-to-orders
 ```
 
-**Explicación de las relaciones:**
+Renombrar: `202*add-deliverer-id-to-orders.js` → `07-add-deliverer-id-to-orders.js`
 
-| Relación | Tipo | Significado |
-|----------|------|-------------|
-| Local → Product | 1:N | Un local tiene muchos productos |
-| Local → Order | 1:N | Un local recibe muchos pedidos |
-| Order → User | N:1 | Un pedido pertenece a un cliente |
-| Order → Deliverer | N:1 | Un pedido es asignado a un repartidor |
-| Order → OrderItem | 1:N | Un pedido tiene muchas líneas de items |
-| Product → OrderItem | 1:N | Un producto aparece en muchas líneas de pedidos |
-| Deliverer → Order | 1:N | Un repartidor tiene muchos pedidos asignados |
+```javascript
+'use strict';
+module.exports = {
+  async up(queryInterface, Sequelize) {
+    await queryInterface.addColumn('Orders', 'DelivererId', {
+      type: Sequelize.INTEGER,
+      references: { model: 'Deliverers', key: 'id' },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL'
+    });
+  },
+  async down(queryInterface) {
+    await queryInterface.removeColumn('Orders', 'DelivererId');
+  }
+};
+```
+
+**Ejecutar migraciones:**
+
+```bash
+npm run db:migrate
+```
 
 ### Completar la matriz de avance
 
-Copiá `datos del proyecto/plantillas/plantilla-matriz-avance.md` a la raíz, nombrala como `matriz-avance-hito-1.md`, y marcar:
+Copiá la plantilla desde `datos del proyecto\plantillas\plantilla-matriz-avance.md` a la raíz como `matriz-avance-hito-1.md` y marcá:
 - GEN-01, GEN-02, GEN-03, rq-01, rq-02 como "desarrollado".
 
 ### Tag del Hito 1
 
 ```bash
-cd ~/Documentos/GitHub/WEB-Delivery
 git add .
 git commit -m "Hito 1: modelos Local, Product, Order, OrderItem, Deliverer"
 git tag -a entrega-hito-1 -m "Hito 1: revisión 20%"
@@ -545,18 +649,41 @@ Al menos 10 requisitos: los 5 del Hito 1 + GEN-04, GEN-05, GEN-06, rq-03, rq-08.
 
 ---
 
-### GEN-04: Registro de usuario (sign up)
+### GEN-06: Middleware de autenticación
 
-**Backend — Crear ruta de autenticación**
+Crear `Delivery\back\middlewares\auth.js`:
 
-Primero instalá bcrypt para hashear contraseñas y jsonwebtoken para los tokens:
+```javascript
+const jwt = require('jsonwebtoken');
 
-```bash
-cd ~/Documentos/GitHub/WEB-Delivery/Delivery/back
-npm install bcryptjs jsonwebtoken
+function authenticate(req, res, next) {
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: true, message: 'Token requerido' });
+  }
+
+  const token = header.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_no_usar_en_produccion_12345');
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: true, message: 'Token inválido o expirado' });
+  }
+}
+
+module.exports = { authenticate };
 ```
 
-Creá la carpeta `routes/` y el archivo `routes/auth.js`:
+**Explicación:** El frontend envía el token en el header `Authorization: Bearer <token>`. Este middleware lo extrae, verifica con `jwt.verify()` y, si es válido, guarda los datos en `req.user` y pasa a la siguiente función. Si no hay token o es inválido, devuelve 401.
+
+---
+
+### GEN-04 + GEN-05: Rutas de autenticación (registro y login)
+
+Crear `Delivery\back\routes\auth.js`:
 
 ```javascript
 const express = require('express');
@@ -594,89 +721,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-module.exports = router;
-```
-
-Explicación:
-- `bcrypt.hash(password, 10)` — Toma la contraseña en texto plano y la convierte en un hash irreversible. El número 10 es el "costo" de procesamiento (más alto = más seguro pero más lento). Nunca guardamos la contraseña original.
-- `User.findOne({ where: { email } })` — Busca si ya existe un usuario con ese email. Si existe, devolvemos 409 (conflicto).
-- El código 201 significa "creado exitosamente".
-
-Después conectá la ruta en `app.js`. Agregá antes del `app.listen`:
-
-```javascript
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
-```
-
-**Frontend — Pantalla de registro**
-
-En `Delivery/front/src/`, creá la carpeta `pages/` y el archivo `pages/Register.jsx`:
-
-```jsx
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-
-export default function Register() {
-  const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post('http://localhost:3000/api/auth/register', form);
-      navigate('/login');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error al registrarse');
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <h2>Registrarse</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <input placeholder="Nombre" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-      <input placeholder="Email" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
-      <input placeholder="Contraseña" type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
-      <button type="submit">Crear cuenta</button>
-    </form>
-  );
-}
-```
-
-Instalá las dependencias del front:
-
-```bash
-cd ~/Documentos/GitHub/WEB-Delivery/Delivery/front
-npm install axios react-router-dom
-```
-
-Configurá el router en `main.jsx` o `App.jsx`:
-
-```jsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Register from './pages/Register';
-
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/register" element={<Register />} />
-      </Routes>
-    </BrowserRouter>
-  );
-}
-```
-
-### GEN-05: Login y emisión JWT
-
-**Backend — Endpoint de login**
-
-Agregá al final de `routes/auth.js`:
-
-```javascript
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
@@ -698,7 +742,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'secreto_temporal',
+      process.env.JWT_SECRET || 'dev_secret_no_usar_en_produccion_12345',
       { expiresIn: '24h' }
     );
 
@@ -708,312 +752,688 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ error: true, message: 'Error del servidor' });
   }
 });
-```
 
-Explicación:
-- `bcrypt.compare(password, user.password)` — Compara la contraseña que el usuario escribió con el hash guardado en la BD. Si coinciden, la contraseña es correcta (nunca sabemos la contraseña original).
-- `jwt.sign(payload, secret, options)` — Crea un JWT. El payload contiene info del usuario (id, email, rol). El secret es una clave que solo el servidor conoce, usada para firmar el token. `expiresIn: '24h'` hace que el token expire en 24 horas.
-- Si el email no existe o la contraseña no coincide, devolvemos **401** (no autorizado) con un mensaje genérico "Credenciales inválidas" para no revelar qué dato está mal.
-
-**Frontend — Pantalla de login**
-
-Creá `pages/Login.jsx`:
-
-```jsx
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-
-export default function Login() {
-  const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post('http://localhost:3000/api/auth/login', form);
-      localStorage.setItem('token', res.data.token);
-      navigate('/');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error al iniciar sesión');
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <h2>Iniciar sesión</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <input placeholder="Email" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
-      <input placeholder="Contraseña" type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
-      <button type="submit">Ingresar</button>
-    </form>
-  );
-}
-```
-
-**Logout:** El logout es simplemente borrar el token:
-
-```javascript
-localStorage.removeItem('token');
-```
-
-**Explicación de localStorage:** Guardamos el token en `localStorage` porque persiste aunque se cierre el navegador. Hay alternativas más seguras (cookies httpOnly) pero para este proyecto académico localStorage es suficiente.
-
-### GEN-06: Middleware de autenticación
-
-Creá la carpeta `middlewares/` y el archivo `middlewares/auth.js`:
-
-```javascript
-const jwt = require('jsonwebtoken');
-
-function authenticate(req, res, next) {
-  const header = req.headers.authorization;
-
-  if (!header || !header.startsWith('Bearer ')) {
-    return res.status(401).json({ error: true, message: 'Token requerido' });
-  }
-
-  const token = header.split(' ')[1];
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secreto_temporal');
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: true, message: 'Token inválido o expirado' });
-  }
-}
-
-module.exports = { authenticate };
+module.exports = router;
 ```
 
 **Explicación:**
-- El frontend envía el token en el header `Authorization: Bearer <token>`.
-- El middleware extrae el token, lo verifica con `jwt.verify()`, y si es válido, guarda los datos del usuario en `req.user` para que lo usen las rutas siguientes.
-- Si no hay token o es inválido, devuelve 401.
-- Las rutas públicas (registro, login, health) NO usan este middleware. Las rutas protegidas SÍ.
+- `bcrypt.hash(password, 10)` — Convierte la contraseña en texto plano a un hash irreversible (costo 10 = seguro).
+- `bcrypt.compare(password, user.password)` — Compara la contraseña escrita con el hash guardado en la BD.
+- `jwt.sign(payload, secret, options)` — Crea un JWT con datos del usuario, firmado con la clave secreta. Expira en 24h.
+- 400 = faltan campos, 401 = credenciales inválidas, 409 = email duplicado.
 
-**Rutas públicas vs protegidas:** En `app.js`, las rutas públicas van antes del middleware global. Un ejemplo:
+---
+
+### rq-03: CRUD Locales (Backend)
+
+Crear `Delivery\back\controllers\localController.js`:
 
 ```javascript
-// Rutas públicas (no necesitan token)
-app.use('/api/auth', authRoutes);
-app.get('/api/health', ...);
+const { Local, Product } = require('../models');
 
-// Rutas protegidas (necesitan token)
-app.use('/api/locals', authenticate, localsRoutes);
+exports.getAll = async (req, res) => {
+  try {
+    const locals = await Local.findAll({
+      where: { isActive: true },
+      order: [['name', 'ASC']]
+    });
+    res.json(locals);
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+};
+
+exports.getById = async (req, res) => {
+  try {
+    const local = await Local.findByPk(req.params.id, { include: Product });
+    if (!local) return res.status(404).json({ error: true, message: 'Local no encontrado' });
+    res.json(local);
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+};
+
+exports.create = async (req, res) => {
+  try {
+    const local = await Local.create(req.body);
+    res.status(201).json(local);
+  } catch (err) {
+    res.status(400).json({ error: true, message: err.message });
+  }
+};
+
+exports.update = async (req, res) => {
+  try {
+    const local = await Local.findByPk(req.params.id);
+    if (!local) return res.status(404).json({ error: true, message: 'Local no encontrado' });
+    await local.update(req.body);
+    res.json(local);
+  } catch (err) {
+    res.status(400).json({ error: true, message: err.message });
+  }
+};
+
+exports.remove = async (req, res) => {
+  try {
+    const local = await Local.findByPk(req.params.id);
+    if (!local) return res.status(404).json({ error: true, message: 'Local no encontrado' });
+    await local.update({ isActive: false }); // Borrado lógico
+    res.json({ message: 'Local desactivado correctamente' });
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+};
 ```
 
-### rq-03: CRUD Locales
-
-**Backend — Crear el CRUD de Locales**
-
-Creá `routes/locals.js`:
+Crear `Delivery\back\routes\locals.js`:
 
 ```javascript
 const express = require('express');
 const router = express.Router();
-const { Local, Product } = require('../models');
+const ctrl = require('../controllers/localController');
 const { authenticate } = require('../middlewares/auth');
 
-// GET /api/locals — Listar todos los locales activos
-router.get('/', async (req, res) => {
-  const locals = await Local.findAll({ where: { active: true } });
-  res.json(locals);
-});
-
-// GET /api/locals/:id — Obtener un local con sus productos
-router.get('/:id', async (req, res) => {
-  const local = await Local.findByPk(req.params.id, { include: Product });
-  if (!local) {
-    return res.status(404).json({ error: true, message: 'Local no encontrado' });
-  }
-  res.json(local);
-});
-
-// POST /api/locals — Crear un local (solo autenticado)
-router.post('/', authenticate, async (req, res) => {
-  const { name, address, phone, category, openingHours, image } = req.body;
-  const local = await Local.create({ name, address, phone, category, openingHours, image, active: true });
-  res.status(201).json(local);
-});
-
-// PUT /api/locals/:id — Actualizar un local
-router.put('/:id', authenticate, async (req, res) => {
-  const local = await Local.findByPk(req.params.id);
-  if (!local) {
-    return res.status(404).json({ error: true, message: 'Local no encontrado' });
-  }
-  await local.update(req.body);
-  res.json(local);
-});
-
-// DELETE /api/locals/:id — Desactivar un local (borrado lógico)
-router.delete('/:id', authenticate, async (req, res) => {
-  const local = await Local.findByPk(req.params.id);
-  if (!local) {
-    return res.status(404).json({ error: true, message: 'Local no encontrado' });
-  }
-  await local.update({ active: false });
-  res.json({ message: 'Local desactivado' });
-});
+router.get('/', ctrl.getAll);
+router.get('/:id', ctrl.getById);
+router.post('/', authenticate, ctrl.create);
+router.put('/:id', authenticate, ctrl.update);
+router.delete('/:id', authenticate, ctrl.remove);
 
 module.exports = router;
 ```
 
-**Explicación del CRUD:**
-
-| Método | Endpoint | ¿Qué hace? | Código HTTP |
-|--------|----------|------------|-------------|
-| GET | /api/locals | Lista todos los locales activos | 200 |
-| GET | /api/locals/:id | Muestra un local con sus productos | 200 / 404 |
-| POST | /api/locals | Crea un local nuevo | 201 |
-| PUT | /api/locals/:id | Actualiza los datos de un local | 200 / 404 |
-| DELETE | /api/locals/:id | Desactiva un local (borrado lógico) | 200 / 404 |
-
-**Borrado lógico:** En vez de eliminar el registro de la BD, ponemos `active: false`. Así no se pierde el histórico de pedidos.
-
-Conectá las rutas en `app.js`:
+Crear `Delivery\back\routes\users.js`:
 
 ```javascript
-const localsRoutes = require('./routes/locals');
-app.use('/api/locals', localsRoutes);
+const express = require('express');
+const router = express.Router();
+const ctrl = require('../controllers/userController');
+const { authenticate } = require('../middlewares/auth');
+
+router.get('/', authenticate, ctrl.getAll);
+router.get('/:id', authenticate, ctrl.getById);
+router.post('/', ctrl.create);
+router.put('/:id', authenticate, ctrl.update);
+router.delete('/:id', authenticate, ctrl.remove);
+
+module.exports = router;
 ```
 
-**Frontend — Listar locales**
+Crear `Delivery\back\controllers\userController.js`:
 
-Creá `pages/Home.jsx` (conexión a la API real):
+```javascript
+const { User } = require('../models');
+const bcrypt = require('bcryptjs');
+
+exports.getAll = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: { exclude: ['password'] },
+      order: [['name', 'ASC']]
+    });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+};
+
+exports.getById = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id, {
+      attributes: { exclude: ['password'] }
+    });
+    if (!user) return res.status(404).json({ error: true, message: 'Usuario no encontrado' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+};
+
+exports.create = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: true, message: 'name, email and password are required' });
+    }
+    const existing = await User.findOne({ where: { email } });
+    if (existing) {
+      return res.status(409).json({ error: true, message: 'Email already in use' });
+    }
+    const hash = await bcrypt.hash(password, 10);
+    const user = await User.create({ name, email, password: hash, role });
+    const { password: _p, ...data } = user.toJSON();
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(400).json({ error: true, message: err.message });
+  }
+};
+
+exports.update = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ error: true, message: 'Usuario no encontrado' });
+    const updates = { ...req.body };
+    if (updates.password) {
+      updates.password = await bcrypt.hash(updates.password, 10);
+    }
+    await user.update(updates);
+    const { password: _p, ...data } = user.toJSON();
+    res.json(data);
+  } catch (err) {
+    res.status(400).json({ error: true, message: err.message });
+  }
+};
+
+exports.remove = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ error: true, message: 'Usuario no encontrado' });
+    await user.destroy();
+    res.json({ message: 'Usuario eliminado correctamente' });
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+};
+```
+
+### rq-03: CRUD Locales (Frontend)
+
+Instalar dependencias del frontend:
+
+```bash
+cd Delivery\front
+npm install axios react-router-dom
+```
+
+Crear `Delivery\front\src\pages\Register.jsx`:
 
 ```jsx
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import axios from 'axios'
 
-export default function Home() {
-  const [locals, setLocals] = useState([]);
+const API = 'http://localhost:3000/api'
 
-  useEffect(() => {
-    axios.get('http://localhost:3000/api/locals')
-      .then(res => setLocals(res.data))
-      .catch(err => console.error(err));
-  }, []);
+export default function Register() {
+  const navigate = useNavigate()
+  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      await axios.post(`${API}/auth/register`, form)
+      navigate('/login')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al registrarse')
+    }
+  }
 
   return (
-    <div>
-      <h2>Locales</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-        {locals.map(local => (
-          <div key={local.id} style={{ border: '1px solid #ccc', padding: '1rem' }}>
-            <h3>{local.name}</h3>
-            <p>{local.category}</p>
-            <p>{local.address}</p>
-          </div>
-        ))}
-      </div>
+    <div className="container">
+      <h2>Registrarse</h2>
+      {error && <p className="error">{error}</p>}
+      <form onSubmit={handleSubmit}>
+        <input placeholder="Nombre" value={form.name}
+          onChange={e => setForm({...form, name: e.target.value})} required />
+        <input placeholder="Email" type="email" value={form.email}
+          onChange={e => setForm({...form, email: e.target.value})} required />
+        <input placeholder="Contraseña" type="password" value={form.password}
+          onChange={e => setForm({...form, password: e.target.value})} required />
+        <button type="submit">Crear cuenta</button>
+      </form>
+      <p>¿Ya tenés cuenta? <Link to="/login">Iniciar sesión</Link></p>
     </div>
-  );
+  )
 }
 ```
 
-**Explicación de `useEffect`:** Es un hook de React que se ejecuta cuando el componente se monta (aparece en pantalla). Adentro hacemos un `axios.get` a la API para traer los locales. Cuando la respuesta llega, actualizamos el estado `locals` con `setLocals`, y React automáticamente vuelve a renderizar la página con los datos.
+Crear `Delivery\front\src\pages\Login.jsx`:
 
-### rq-08: Panel de seguimiento de pedidos activos
+```jsx
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import axios from 'axios'
 
-**Backend — Endpoint para pedidos activos**
+const API = 'http://localhost:3000/api'
 
-Creá `routes/orders.js`:
+export default function Login() {
+  const navigate = useNavigate()
+  const [form, setForm] = useState({ email: '', password: '' })
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      const res = await axios.post(`${API}/auth/login`, form)
+      localStorage.setItem('token', res.data.token)
+      navigate('/')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al iniciar sesión')
+    }
+  }
+
+  return (
+    <div className="container">
+      <h2>Iniciar sesión</h2>
+      {error && <p className="error">{error}</p>}
+      <form onSubmit={handleSubmit}>
+        <input placeholder="Email" type="email" value={form.email}
+          onChange={e => setForm({...form, email: e.target.value})} required />
+        <input placeholder="Contraseña" type="password" value={form.password}
+          onChange={e => setForm({...form, password: e.target.value})} required />
+        <button type="submit">Ingresar</button>
+      </form>
+      <p>¿No tenés cuenta? <Link to="/register">Registrarse</Link></p>
+    </div>
+  )
+}
+```
+
+Crear `Delivery\front\src\pages\Home.jsx`:
+
+```jsx
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
+
+const API = 'http://localhost:3000/api'
+
+export default function Home() {
+  const navigate = useNavigate()
+  const [locales, setLocales] = useState([])
+  const token = localStorage.getItem('token')
+
+  const cargar = () => {
+    axios.get(`${API}/locals`)
+      .then(res => setLocales(res.data))
+      .catch(err => console.error(err))
+  }
+
+  useEffect(cargar, [])
+
+  const eliminar = async (id) => {
+    if (!confirm('¿Desactivar este local?')) return
+    try {
+      await axios.delete(`${API}/locals/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      cargar()
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error al eliminar')
+    }
+  }
+
+  return (
+    <div className="container">
+      <div className="header-row">
+        <h2>Locales</h2>
+        {token && (
+          <button onClick={() => navigate('/locales/nuevo')}>+ Nuevo</button>
+        )}
+      </div>
+      <div className="grid">
+        {locales.map(l => (
+          <div key={l.id} className="card">
+            <h3>{l.name}</h3>
+            <p className="category">{l.category}</p>
+            <p>{l.address}</p>
+            {l.phone && <p>📞 {l.phone}</p>}
+            {l.openingHours && <p>🕐 {l.openingHours}</p>}
+            {token && (
+              <div className="card-actions">
+                <button onClick={() => navigate(`/locales/editar/${l.id}`)}>Editar</button>
+                <button className="btn-danger" onClick={() => eliminar(l.id)}>Desactivar</button>
+              </div>
+            )}
+          </div>
+        ))}
+        {locales.length === 0 && <p>No hay locales disponibles</p>}
+      </div>
+    </div>
+  )
+}
+```
+
+Crear `Delivery\front\src\pages\LocalForm.jsx`:
+
+```jsx
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import axios from 'axios'
+
+const API = 'http://localhost:3000/api'
+
+export default function LocalForm() {
+  const navigate = useNavigate()
+  const { id } = useParams()
+  const isEdit = Boolean(id)
+  const token = localStorage.getItem('token')
+
+  const [form, setForm] = useState({
+    name: '', address: '', phone: '', category: '',
+    openingHours: '', description: '', imageUrl: ''
+  })
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!token) { navigate('/login'); return }
+    if (isEdit) {
+      axios.get(`${API}/locals/${id}`)
+        .then(res => {
+          const l = res.data
+          setForm({
+            name: l.name || '', address: l.address || '',
+            phone: l.phone || '', category: l.category || '',
+            openingHours: l.openingHours || '',
+            description: l.description || '', imageUrl: l.imageUrl || ''
+          })
+        })
+        .catch(() => navigate('/'))
+    }
+  }, [id])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      if (isEdit) {
+        await axios.put(`${API}/locals/${id}`, form, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      } else {
+        await axios.post(`${API}/locals`, form, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      }
+      navigate('/')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al guardar')
+    }
+  }
+
+  return (
+    <div className="container">
+      <h2>{isEdit ? 'Editar local' : 'Nuevo local'}</h2>
+      {error && <p className="error">{error}</p>}
+      <form onSubmit={handleSubmit}>
+        <input placeholder="Nombre *" value={form.name}
+          onChange={e => setForm({...form, name: e.target.value})} required />
+        <input placeholder="Dirección *" value={form.address}
+          onChange={e => setForm({...form, address: e.target.value})} required />
+        <input placeholder="Teléfono" value={form.phone}
+          onChange={e => setForm({...form, phone: e.target.value})} />
+        <input placeholder="Categoría (ej: pizza, hamburguesa)" value={form.category}
+          onChange={e => setForm({...form, category: e.target.value})} />
+        <input placeholder="Horario (ej: 10:00-22:00)" value={form.openingHours}
+          onChange={e => setForm({...form, openingHours: e.target.value})} />
+        <textarea placeholder="Descripción" value={form.description}
+          onChange={e => setForm({...form, description: e.target.value})} rows={3} />
+        <input placeholder="URL de imagen" value={form.imageUrl}
+          onChange={e => setForm({...form, imageUrl: e.target.value})} />
+        <div className="form-actions">
+          <button type="submit">{isEdit ? 'Guardar cambios' : 'Crear local'}</button>
+          <button type="button" className="btn-secondary"
+            onClick={() => navigate('/')}>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+```
+
+### rq-08: Dashboard de pedidos activos (Backend)
+
+Crear `Delivery\back\routes\orders.js`:
 
 ```javascript
 const express = require('express');
 const router = express.Router();
-const { Order, OrderItem, Product, Local, Deliverer } = require('../models');
+const ctrl = require('../controllers/orderController');
 const { authenticate } = require('../middlewares/auth');
 
-// GET /api/orders/active — Pedidos activos (pendiente, preparando, en_camino)
-router.get('/active', authenticate, async (req, res) => {
-  const orders = await Order.findAll({
-    where: { status: ['pendiente', 'preparando', 'en_camino'] },
-    include: [Local, Deliverer, { model: OrderItem, include: Product }]
-  });
-  res.json(orders);
-});
+router.get('/', authenticate, ctrl.getAll);
+router.get('/active', authenticate, ctrl.getActive);
+router.get('/:id', authenticate, ctrl.getById);
+router.post('/', authenticate, ctrl.create);
+router.patch('/:id/status', authenticate, ctrl.updateStatus);
+router.delete('/:id', authenticate, ctrl.remove);
 
 module.exports = router;
 ```
 
-Y conectalo en `app.js`:
+Crear `Delivery\back\controllers\orderController.js`:
 
 ```javascript
-const ordersRoutes = require('./routes/orders');
-app.use('/api/orders', ordersRoutes);
+const { Order, User, Local, OrderItem, Product } = require('../models');
+
+exports.getAll = async (req, res) => {
+  try {
+    const orders = await Order.findAll({
+      include: [
+        { model: User, attributes: ['id', 'name', 'email'] },
+        { model: Local, attributes: ['id', 'name', 'address'] },
+        { model: OrderItem, include: [Product] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+};
+
+exports.getActive = async (req, res) => {
+  try {
+    const orders = await Order.findAll({
+      where: { status: ['pendiente', 'preparando', 'en_camino'] },
+      include: [
+        { model: User, attributes: ['id', 'name', 'email'] },
+        { model: Local, attributes: ['id', 'name', 'address'] },
+        { model: OrderItem, include: [Product] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+};
+
+exports.getById = async (req, res) => {
+  try {
+    const order = await Order.findByPk(req.params.id, {
+      include: [
+        { model: User, attributes: ['id', 'name', 'email'] },
+        { model: Local, attributes: ['id', 'name', 'address'] },
+        { model: OrderItem, include: [Product] }
+      ]
+    });
+    if (!order) return res.status(404).json({ error: true, message: 'Pedido no encontrado' });
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+};
+
+exports.create = async (req, res) => {
+  try {
+    const order = await Order.create(req.body);
+    const created = await Order.findByPk(order.id, {
+      include: [
+        { model: User, attributes: ['id', 'name', 'email'] },
+        { model: Local, attributes: ['id', 'name'] }
+      ]
+    });
+    res.status(201).json(created);
+  } catch (err) {
+    res.status(400).json({ error: true, message: err.message });
+  }
+};
+
+exports.updateStatus = async (req, res) => {
+  try {
+    const order = await Order.findByPk(req.params.id);
+    if (!order) return res.status(404).json({ error: true, message: 'Pedido no encontrado' });
+    await order.update({ status: req.body.status });
+    res.json(order);
+  } catch (err) {
+    res.status(400).json({ error: true, message: err.message });
+  }
+};
+
+exports.remove = async (req, res) => {
+  try {
+    const order = await Order.findByPk(req.params.id);
+    if (!order) return res.status(404).json({ error: true, message: 'Pedido no encontrado' });
+    await order.destroy();
+    res.json({ message: 'Pedido eliminado correctamente' });
+  } catch (err) {
+    res.status(500).json({ error: true, message: err.message });
+  }
+};
 ```
 
-**Frontend — Panel de pedidos activos**
+### rq-08: Dashboard de pedidos activos (Frontend)
 
-Creá `pages/Dashboard.jsx`:
+Crear `Delivery\front\src\pages\Dashboard.jsx`:
 
 ```jsx
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect } from 'react'
+import axios from 'axios'
+
+const API = 'http://localhost:3000/api'
 
 export default function Dashboard() {
-  const [orders, setOrders] = useState([]);
-  const token = localStorage.getItem('token');
+  const [orders, setOrders] = useState([])
+  const token = localStorage.getItem('token')
 
   useEffect(() => {
-    axios.get('http://localhost:3000/api/orders/active', {
+    if (!token) return
+    axios.get(`${API}/orders/active`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => setOrders(res.data))
-      .catch(err => console.error(err));
-  }, []);
+      .catch(err => console.error(err))
+  }, [])
 
   const cambiarEstado = async (id, nuevoEstado) => {
-    await axios.put(`http://localhost:3000/api/orders/${id}`, { status: nuevoEstado }, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const updated = orders.map(o => o.id === id ? { ...o, status: nuevoEstado } : o);
-    setOrders(updated);
-  };
+    try {
+      await axios.patch(`${API}/orders/${id}/status`,
+        { status: nuevoEstado },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      setOrders(orders.map(o => o.id === id ? { ...o, status: nuevoEstado } : o))
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const cerrarSesion = () => {
+    localStorage.removeItem('token')
+    window.location.href = '/login'
+  }
+
+  if (!token) {
+    return <div className="container"><p>Debés iniciar sesión para ver esta página.</p></div>
+  }
 
   return (
-    <div>
-      <h2>Pedidos activos</h2>
+    <div className="container">
+      <div className="header-row">
+        <h2>Panel de pedidos</h2>
+        <button onClick={cerrarSesion} className="btn-secondary">Cerrar sesión</button>
+      </div>
+      {orders.length === 0 && <p>No hay pedidos activos</p>}
       {orders.map(order => (
-        <div key={order.id} style={{ border: '1px solid #ccc', margin: '1rem 0', padding: '1rem' }}>
-          <p><strong>Local:</strong> {order.Local?.name}</p>
-          <p><strong>Estado:</strong> {order.status}</p>
+        <div key={order.id} className="card order-card">
+          <p><strong>Local:</strong> {order.Local?.name || '—'}</p>
+          <p><strong>Estado:</strong> <span className={`status status-${order.status}`}>{order.status}</span></p>
           <p><strong>Dirección:</strong> {order.deliveryAddress}</p>
           <p><strong>Total:</strong> ${order.total}</p>
-          <div>
+          <div className="status-buttons">
             {['pendiente', 'preparando', 'en_camino', 'entregado'].map(est => (
-              <button key={est} onClick={() => cambiarEstado(order.id, est)} disabled={order.status === est}>
-                {est}
-              </button>
+              <button key={est} onClick={() => cambiarEstado(order.id, est)}
+                disabled={order.status === est}
+                className={order.status === est ? 'active' : ''}>{est}</button>
             ))}
           </div>
         </div>
       ))}
     </div>
-  );
+  )
 }
 ```
 
-**Explicación del estado:** Los pedidos pasan por una secuencia de estados:
-1. `pendiente` — El cliente creó el pedido, el local aún no lo procesa.
-2. `preparando` — El local está preparando los productos.
-3. `en_camino` — Un repartidor recogió el pedido y va hacia el cliente.
-4. `entregado` — El cliente recibió el pedido.
-5. `cancelado` — El pedido fue cancelado (solo si está en pendiente).
+### App.jsx (Router + Navegación)
 
-### Completar la matriz de avance
+Actualizar `Delivery\front\src\App.jsx`:
 
-Actualizá la matriz marcando GEN-04, GEN-05, GEN-06, rq-03, rq-08 como "desarrollado". Total: 10/23.
+```jsx
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import Register from './pages/Register'
+import Login from './pages/Login'
+import Home from './pages/Home'
+import Dashboard from './pages/Dashboard'
+import LocalForm from './pages/LocalForm'
+
+function Nav() {
+  const token = localStorage.getItem('token')
+
+  return (
+    <nav>
+      <Link to="/" className="logo">Delivery App</Link>
+      <div className="nav-links">
+        <Link to="/">Inicio</Link>
+        {token ? (
+          <>
+            <Link to="/dashboard">Pedidos</Link>
+            <button onClick={() => { localStorage.removeItem('token'); window.location.href = '/' }}>
+              Salir
+            </button>
+          </>
+        ) : (
+          <>
+            <Link to="/login">Ingresar</Link>
+            <Link to="/register">Registro</Link>
+          </>
+        )}
+      </div>
+    </nav>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Nav />
+      <main>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/locales/nuevo" element={<LocalForm />} />
+          <Route path="/locales/editar/:id" element={<LocalForm />} />
+        </Routes>
+      </main>
+    </BrowserRouter>
+  )
+}
+```
+
+### CSS (App.css)
+
+Reemplazar `Delivery\front\src\App.css` con los estilos completos.
+
+### Matriz de avance
+
+Copiá como `matriz-avance-hito-2.md` y marcá:
+- GEN-01, GEN-02, GEN-03, GEN-04, GEN-05, GEN-06, rq-01, rq-02, rq-03, rq-08 como "desarrollado".
+- Total: 10/23.
 
 ### Tag del Hito 2
 
 ```bash
-cd ~/Documentos/GitHub/WEB-Delivery
 git add .
 git commit -m "Hito 2: auth (registro, login, JWT) + CRUD Locales + Dashboard pedidos"
 git tag -a entrega-hito-2 -m "Hito 2: revisión 40%"
@@ -1028,502 +1448,134 @@ git push origin main --tags
 
 Completar los 23 requisitos. Los 10 ya hechos + GEN-07, GEN-08, GEN-09, GEN-10, GEN-11, GEN-12, GEN-13, rq-04, rq-05, rq-06, rq-07, rq-09, rq-10.
 
----
-
 ### GEN-07: Restablecer contraseña
 
-**Backend — Flujo de reset**
-
-Crear tabla `password_reset_tokens`:
+Crear modelo `PasswordResetToken`:
 
 ```bash
+cd Delivery\back
 npx sequelize-cli model:generate --name PasswordResetToken --attributes email:string,token:string,expiresAt:date,used:boolean
 npx sequelize-cli db:migrate
 ```
 
-Agregar endpoints a `routes/auth.js`:
+Agregar a `routes/auth.js` los endpoints:
+- `POST /api/auth/forgot-password` — recibe email, genera token aleatorio de 32 bytes, lo guarda con expiración de 1h, muestra token en consola (en producción se enviaría por email).
+- `POST /api/auth/reset-password` — recibe email + token + newPassword, verifica que el token exista, no esté usado y no haya expirado, actualiza la contraseña, marca token como usado.
 
-```javascript
-// POST /api/auth/forgot-password
-router.post('/forgot-password', async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ where: { email } });
-  if (!user) {
-    return res.status(404).json({ error: true, message: 'Email no encontrado' });
-  }
-
-  const token = crypto.randomBytes(32).toString('hex');
-  await PasswordResetToken.create({
-    email,
-    token,
-    expiresAt: new Date(Date.now() + 3600000), // 1 hora
-    used: false
-  });
-
-  console.log(`Token de reset para ${email}: ${token}`); // En desarrollo se muestra en consola
-  res.json({ message: 'Si el email existe, recibirás un token de restablecimiento' });
-});
-
-// POST /api/auth/reset-password
-router.post('/reset-password', async (req, res) => {
-  const { email, token, newPassword } = req.body;
-
-  const resetToken = await PasswordResetToken.findOne({
-    where: { email, token, used: false, expiresAt: { [Op.gt]: new Date() } }
-  });
-
-  if (!resetToken) {
-    return res.status(400).json({ error: true, message: 'Token inválido o expirado' });
-  }
-
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-  await User.update({ password: hashedPassword }, { where: { email } });
-  await resetToken.update({ used: true });
-
-  res.json({ message: 'Contraseña restablecida exitosamente' });
-});
-```
-
-En la cabecera del archivo necesitás importar `crypto` y `Op`:
-
+Necesitás importar al principio:
 ```javascript
 const crypto = require('crypto');
 const { Op } = require('sequelize');
 ```
 
-**Explicación del flujo:**
-1. El usuario ingresa su email y pide restablecer la contraseña.
-2. El servidor genera un token aleatorio de 32 bytes y lo guarda en la BD con expiración de 1 hora.
-3. En desarrollo, el token se muestra en la consola del servidor (en producción se enviaría por email).
-4. El usuario ingresa el token, su email y la nueva contraseña.
-5. El servidor verifica que el token exista, no esté usado y no haya expirado.
-6. Si todo ok, actualiza la contraseña y marca el token como usado (no se puede reutilizar).
-
-**Frontend — Pantallas de reset**
-
-Creá `pages/ForgotPassword.jsx` y `pages/ResetPassword.jsx`.
+Frontend: crear `pages/ForgotPassword.jsx` y `pages/ResetPassword.jsx`.
 
 ### GEN-08: Manejo centralizado de errores
 
-En `app.js`, antes del `app.listen`, agregá un middleware de error:
+Agregar en `app.js` (al final, antes del `app.listen`):
 
 ```javascript
-// Middleware de error global (debe ir al final, después de todas las rutas)
 app.use((err, req, res, next) => {
   console.error(err);
-
   if (process.env.NODE_ENV === 'production') {
     res.status(500).json({ error: true, message: 'Error interno del servidor' });
   } else {
     res.status(500).json({ error: true, message: err.message, stack: err.stack });
   }
 });
-
-// Manejo de 404 — rutas no encontradas
-app.use((req, res) => {
-  res.status(404).json({ error: true, message: 'Ruta no encontrada' });
-});
 ```
 
-**Explicación:** Express identifica un middleware de error porque tiene **4 parámetros** `(err, req, res, next)`. Si cualquier ruta tira un error con `next(err)`, este middleware lo captura. En producción no mostramos el stack trace por seguridad.
+### GEN-09: CRUD REST + UI completo
 
-### GEN-09: CRUD REST completo + pantallas web
+Asegurar que todos los CRUD tengan API completa y pantallas web.
 
-Esto se cubre con los CRUD que ya hicimos de Locales (rq-03) y Pedidos (rq-04). Asegurate de que:
-- El CRUD API funcione completo (Get All, Get By Id, Create, Update, Delete).
-- Las pantallas web correspondientes existan.
-- La UI muestre errores de la API (no console.error).
+### GEN-10: Validaciones de entrada
 
-### GEN-10: Validaciones de entrada y reglas HTTP
-
-Agregá validaciones en cada controlador:
-
+Agregar en cada controlador validaciones como:
 ```javascript
-// Ejemplo de validación en POST /api/locals
-router.post('/', authenticate, async (req, res) => {
-  const { name, address } = req.body;
-
-  if (!name || name.trim().length === 0) {
-    return res.status(422).json({ error: true, message: 'El nombre del local es obligatorio' });
-  }
-
-  if (!address || address.trim().length === 0) {
-    return res.status(422).json({ error: true, message: 'La dirección es obligatoria' });
-  }
-
-  // ... crear local
-});
-```
-
-**Códigos HTTP que usamos:**
-
-| Código | Significado | ¿Cuándo usarlo? |
-|--------|-------------|------------------|
-| 200 | OK | Respuesta exitosa |
-| 201 | Created | Recurso creado exitosamente |
-| 400 | Bad Request | Faltan campos obligatorios |
-| 401 | Unauthorized | Token faltante, inválido o credenciales incorrectas |
-| 404 | Not Found | Recurso no encontrado |
-| 409 | Conflict | Email duplicado, regla de negocio violada |
-| 422 | Unprocessable Entity | Dato inválido (ej: nombre vacío) |
-| 500 | Internal Server Error | Error inesperado del servidor |
-
-### rq-04: CRUD Pedidos
-
-Similar a rq-03 pero para pedidos. Agregá a `routes/orders.js`:
-
-```javascript
-// GET /api/orders — Listar pedidos del usuario autenticado
-router.get('/', authenticate, async (req, res) => {
-  const orders = await Order.findAll({
-    where: { UserId: req.user.id },
-    include: [Local, { model: OrderItem, include: Product }]
-  });
-  res.json(orders);
-});
-
-// GET /api/orders/:id — Detalle de un pedido
-router.get('/:id', authenticate, async (req, res) => {
-  const order = await Order.findByPk(req.params.id, {
-    include: [Local, Deliverer, { model: OrderItem, include: Product }]
-  });
-  if (!order) {
-    return res.status(404).json({ error: true, message: 'Pedido no encontrado' });
-  }
-  res.json(order);
-});
-
-// POST /api/orders — Crear pedido (con transacción)
-router.post('/', authenticate, async (req, res) => {
-  const { LocalId, items, deliveryAddress } = req.body;
-
-  // Validar datos básicos
-  if (!LocalId || !items || !items.length || !deliveryAddress) {
-    return res.status(400).json({ error: true, message: 'Faltan datos del pedido' });
-  }
-
-  // Iniciar transacción
-  const t = await sequelize.transaction();
-  try {
-    let total = 0;
-
-    // Crear cada OrderItem y calcular total
-    const orderItems = await Promise.all(items.map(async (item) => {
-      const product = await Product.findByPk(item.ProductId, { transaction: t });
-      if (!product) {
-        throw new Error(`Producto ${item.ProductId} no encontrado`);
-      }
-      const subtotal = parseFloat(product.price) * item.quantity;
-      total += subtotal;
-      return { ProductId: item.ProductId, quantity: item.quantity, unitPrice: product.price };
-    }));
-
-    // Crear la orden
-    const order = await Order.create({
-      UserId: req.user.id,
-      LocalId,
-      status: 'pendiente',
-      total,
-      deliveryAddress,
-      deliveryFee: 0
-    }, { transaction: t });
-
-    // Crear los items asociados
-    await Promise.all(orderItems.map(oi =>
-      OrderItem.create({ ...oi, OrderId: order.id }, { transaction: t })
-    ));
-
-    await t.commit();
-    res.status(201).json(order);
-  } catch (error) {
-    await t.rollback();
-    res.status(500).json({ error: true, message: error.message || 'Error al crear pedido' });
-  }
-});
-```
-
-**Explicación de transacciones:** Cuando creamos un pedido, tenemos que hacer varias operaciones: crear la orden, crear cada item, calcular el total. Si alguna falla (ej: un producto no existe), hacemos `rollback()` para que ninguna operación se guarde a medias. Es como decir "todo o nada". Así la BD nunca queda en un estado inconsistente.
-
-**Frontend — Crear pedido con carrito**
-
-Creá `pages/CreateOrder.jsx`. El flujo sería:
-1. Seleccionar un local.
-2. Ver sus productos.
-3. Agregar productos a un carrito (estado local).
-4. Ingresar dirección de entrega.
-5. Confirmar → POST a la API.
-
-### rq-05: No cancelar pedido en en_camino o entregado
-
-En la ruta de cancelar pedido:
-
-```javascript
-// PUT /api/orders/:id/cancel
-router.put('/:id/cancel', authenticate, async (req, res) => {
-  const order = await Order.findByPk(req.params.id);
-  if (!order) {
-    return res.status(404).json({ error: true, message: 'Pedido no encontrado' });
-  }
-
-  if (order.status === 'en_camino' || order.status === 'entregado') {
-    return res.status(409).json({
-      error: true,
-      message: 'No se puede cancelar un pedido que está en camino o ya fue entregado'
-    });
-  }
-
-  order.status = 'cancelado';
-  await order.save();
-  res.json(order);
-});
-```
-
-**Explicación:** Esta es una regla de negocio. No tiene sentido cancelar un pedido que el repartidor ya está llevando o que ya llegó. Devolvemos 409 (conflicto) porque la acción solicitada choca contra el estado actual del recurso.
-
-### rq-06: Total coherente con items
-
-El total se calcula automáticamente al crear el pedido (en la transacción de rq-04). También agregá una validación en el modelo:
-
-En `models/order.js`, agregá una validación custom para que nadie pueda setear un total manualmente. Mejor: que el total se calcule SIEMPRE en el servidor y nunca se confíe en lo que envía el cliente.
-
-### rq-07: Filtros: pedidos por estado o cliente
-
-En la ruta GET /api/orders, agregá filtros por query params:
-
-```javascript
-// GET /api/orders — con filtros opcionales
-router.get('/', authenticate, async (req, res) => {
-  const where = {};
-
-  // Filtro por estado
-  if (req.query.status) {
-    where.status = req.query.status;
-  }
-
-  // Filtro por cliente (solo admin, o el propio usuario)
-  if (req.query.userId) {
-    where.UserId = req.query.userId;
-  } else {
-    where.UserId = req.user.id; // Por defecto, solo sus pedidos
-  }
-
-  const orders = await Order.findAll({
-    where,
-    include: [Local, Deliverer, { model: OrderItem, include: Product }]
-  });
-  res.json(orders);
-});
-```
-
-**Frontend:** Agregá un `<select>` para filtrar por estado y un input para buscar por cliente.
-
-### rq-09: Flujo transaccional: crear pedido con dirección + items + tracking
-
-Cubierto con el POST /api/orders y la transacción. Agregá tracking en el front con una barra de progreso:
-
-```jsx
-function OrderStatus({ status }) {
-  const estados = ['pendiente', 'preparando', 'en_camino', 'entregado'];
-  const actual = estados.indexOf(status);
-
-  return (
-    <div style={{ display: 'flex', gap: '0.5rem', margin: '1rem 0' }}>
-      {estados.map((est, i) => (
-        <div key={est} style={{
-          padding: '0.5rem 1rem',
-          background: i <= actual ? '#4CAF50' : '#ddd',
-          color: i <= actual ? 'white' : 'black',
-          borderRadius: '4px'
-        }}>
-          {est}
-        </div>
-      ))}
-    </div>
-  );
+if (!name || name.trim().length === 0) {
+  return res.status(422).json({ error: true, message: 'El nombre es obligatorio' });
 }
 ```
 
-### rq-10: Asignar repartidor + ETA simulado
+Códigos HTTP: 200 (OK), 201 (Created), 400 (Bad Request), 401 (Unauthorized), 404 (Not Found), 409 (Conflict), 422 (Unprocessable Entity), 500 (Internal Server Error).
 
-**Backend — Asignar repartidor**
+### rq-04: CRUD Pedidos completo
 
-```javascript
-// PUT /api/orders/:id/assign
-router.put('/:id/assign', authenticate, async (req, res) => {
-  const { delivererId } = req.body;
-  const order = await Order.findByPk(req.params.id);
+Mejorar `routes/orders.js`:
+- `POST /api/orders` con transacción (crear Order + OrderItems, calcular total desde los productos).
+- Frontend: página para crear pedido con selección de local, productos, carrito, dirección.
 
-  if (!order) {
-    return res.status(404).json({ error: true, message: 'Pedido no encontrado' });
-  }
+### rq-05: No cancelar en camino
 
-  const deliverer = await Deliverer.findByPk(delivererId);
-  if (!deliverer || !deliverer.active) {
-    return res.status(400).json({ error: true, message: 'Repartidor no disponible' });
-  }
+Agregar endpoint `PUT /api/orders/:id/cancel` que rechace con 409 si el estado es `en_camino` o `entregado`.
 
-  // ETA simulado: entre 15 y 45 minutos
-  const etaMinutes = Math.floor(Math.random() * 30) + 15;
-  const estimatedDelivery = new Date(Date.now() + etaMinutes * 60000);
+### rq-06: Total coherente
 
-  await order.update({
-    DelivererId: delivererId,
-    status: 'en_camino',
-    estimatedDelivery
-  });
+Calcular el total automáticamente en el servidor = SUM(cantidad * precio_unitario). Nunca confiar en el total que envía el cliente.
 
-  res.json({
-    order,
-    deliverer: { name: deliverer.name, phone: deliverer.phone, vehicle: deliverer.vehicle },
-    eta: `${etaMinutes} minutos`
-  });
-});
-```
+### rq-07: Filtros por estado/cliente
 
-**Frontend — Mostrar repartidor y ETA**
+`GET /api/orders?status=pendiente&userId=1` con query params. Frontend: agregar select de filtro.
 
-En el detalle del pedido, mostrá:
+### rq-09: Flujo transaccional completo
 
-```jsx
-{order.Deliverer && (
-  <div>
-    <h3>Repartidor asignado</h3>
-    <p>Nombre: {order.Deliverer.name}</p>
-    <p>Vehículo: {order.Deliverer.vehicle}</p>
-    <p>ETA: {order.estimatedDelivery ? new Date(order.estimatedDelivery).toLocaleTimeString() : '—'}</p>
-  </div>
-)}
-```
+Crear página `CreateOrder.jsx`:
+1. Seleccionar local
+2. Ver productos
+3. Agregar al carrito
+4. Ingresar dirección
+5. Confirmar → POST a API
+Barra de progreso visual en el Dashboard.
+
+### rq-10: Asignar repartidor + ETA
+
+Endpoint `PUT /api/orders/:id/assign`:
+- Recibe `{ delivererId }`
+- Verifica repartidor activo
+- Simula ETA (15-45 min aleatorio)
+- Actualiza `DelivererId`, `status: 'en_camino'`, `estimatedDeliveryTime`
+Frontend: mostrar datos del repartidor y ETA.
 
 ### GEN-11: Colección Postman
 
-1. Abrí Postman.
-2. Creá una colección llamada "Delivery App".
-3. Definí variables de colección: `baseUrl` = `http://localhost:3000/api`, `token` = vacío.
-4. Agregá requests:
-   - **Register** — POST `{{baseUrl}}/auth/register`
-   - **Login** — POST `{{baseUrl}}/auth/login`
-   - **Get Locals** — GET `{{baseUrl}}/locals`
-   - **Create Local** — POST `{{baseUrl}}/locals` (con token)
-   - **Get Active Orders** — GET `{{baseUrl}}/orders/active` (con token)
-   - **Cancel Order** — PUT `{{baseUrl}}/orders/1/cancel` (con token, caso 409)
-   - **Sin Token** — GET `{{baseUrl}}/locals` (sin token, caso 401)
-5. En el request de Login, agregá un script de prueba que guarde el token automáticamente:
-
-```javascript
-pm.collectionVariables.set("token", pm.response.json().token);
-```
-6. Exportá la colección como JSON y guardala en `Delivery/back/postman/coleccion.json`.
+Crear carpeta `Delivery\back\postman\` y exportar colección Postman con:
+- Register, Login, Get Locals, Create Local, Get Active Orders, Cancel Order, Sin Token
+- Script en Login que auto-guarda token: `pm.collectionVariables.set("token", pm.response.json().token);`
 
 ### GEN-12: Evolución de esquema
 
-Agregá un cambio al esquema. Por ejemplo, agregar un campo `description` a la tabla `Locals`:
+Crear migración extra (ej: agregar `discount` a Orders) y documentar en README.
 
-```bash
-npx sequelize-cli migration:generate --name add-description-to-locals
-```
+### GEN-13: Deploy Railway + Vercel
 
-Editá el archivo generado en `migrations/`:
+**Railway (API + BD):**
+1. Ir a [railway.app](https://railway.app) e iniciar sesión con GitHub
+2. New Project → Deploy from GitHub repo → `ianbmisaac/WEB-Delivery`
+3. Configurar Start Command: `node app.js`
+4. Agregar PostgreSQL desde New → Database
+5. Variables de entorno: `DATABASE_URL` (copiar del plugin), `JWT_SECRET`, `NODE_ENV=production`, `CORS_ORIGIN=URL_FRONT`
+6. Ejecutar migraciones: `railway run "npx sequelize-cli db:migrate"`
 
-```javascript
-'use strict';
-module.exports = {
-  async up(queryInterface, Sequelize) {
-    await queryInterface.addColumn('Locals', 'description', {
-      type: Sequelize.TEXT,
-      allowNull: true
-    });
-  },
-  async down(queryInterface, Sequelize) {
-    await queryInterface.removeColumn('Locals', 'description');
-  }
-};
-```
-
-Ejecutá la migración:
-
-```bash
-npx sequelize-cli db:migrate
-```
-
-Documentá en el README que se agregó el campo `description` a la tabla `Locals` para permitir descripciones más largas de los locales.
-
-### GEN-13: Deploy Railway (API+BD) + Vercel (Front)
-
-**Paso 1: Preparar Railway**
-
-1. Andá a [railway.app](https://railway.app) e iniciá sesión con GitHub.
-2. Hacé clic en **"New Project"**.
-3. Seleccioná **"Deploy from GitHub repo"**.
-4. Elegí `ianbmisaac/WEB-Delivery`.
-5. Railway detecta el `package.json` y despliega automáticamente.
-6. Configurá el **Start Command** como `node app.js`.
-7. Agregá un servicio PostgreSQL desde **"New" > "Database" > "Add PostgreSQL"**.
-8. En las variables de entorno del servicio API, agregá:
-   - `DATABASE_URL` — Copiala del plugin PostgreSQL.
-   - `JWT_SECRET` — Un string largo y aleatorio.
-   - `NODE_ENV` = `production`
-   - `CORS_ORIGIN` = URL del front (después del deploy).
-9. Ejecutá las migraciones en Railway:
-   - Conectate por Railway CLI: `railway login && railway run "npx sequelize-cli db:migrate"`.
-   - O desde el panel: **"Connect" > "Railway CLI"** y seguí las instrucciones.
-
-**Paso 2: Preparar el front para producción**
-
-Creá un archivo `.env` en `Delivery/front/`:
-
-```
-VITE_API_URL=https://tu-api.up.railway.app/api
-```
-
-**Paso 3: Desplegar front en Vercel**
-
-1. Andá a [vercel.com](https://vercel.com) e iniciá sesión con GitHub.
-2. **"Add New..." > "Project"**.
-3. Elegí el repositorio `ianbmisaac/WEB-Delivery`.
-4. **Root Directory:** `Delivery/front`
-5. **Framework Preset:** Vite
-6. **Environment Variables:** `VITE_API_URL` = la URL de la API en Railway.
-7. **"Deploy"**.
-
-**Paso 4: Configurar CORS**
-
-En el backend, configurá CORS dinámicamente:
-
-```javascript
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
-```
-
-**Paso 5: Verificar**
-
-1. Abrí la URL del front en Vercel.
-2. Registrate, iniciá sesión, explorá locales, creá un pedido.
-3. Todo debe funcionar contra la API en Railway.
-
-### Completar la matriz de avance final
-
-Marcá los 23 requisitos como "desarrollado". Total: 23/23.
+**Vercel (Frontend):**
+1. Ir a [vercel.com](https://vercel.com) e iniciar sesión con GitHub
+2. Add New → Project → `ianbmisaac/WEB-Delivery`
+3. Root Directory: `Delivery/front`
+4. Framework Preset: Vite
+5. Environment Variables: `VITE_API_URL` = URL de la API en Railway
 
 ### README con URLs de producción
 
-Actualizá el README raíz con las URLs de producción:
-
+Actualizar README.md con:
 ```markdown
 ## URLs de Producción
-
 - **API:** https://tu-api.up.railway.app
 - **Frontend:** https://tu-app.vercel.app
-- **Plataforma frontend:** Vercel
 ```
 
 ### Tag final
 
 ```bash
-cd ~/Documentos/GitHub/WEB-Delivery
 git add .
 git commit -m "Hito 3: proyecto completo + deploy"
 git tag -a entrega-hito-3 -m "Hito 3: entrega final 100%"
@@ -1539,9 +1591,9 @@ git push origin main --tags
 | Comando | Descripción |
 |---------|-------------|
 | `npm run dev` | Iniciar servidor de desarrollo |
-| `npx sequelize-cli db:migrate` | Ejecutar migraciones |
-| `npx sequelize-cli db:seed:all` | Ejecutar seeders |
-| `npx sequelize-cli migration:generate --name descripcion` | Crear migración nueva |
+| `npm run db:migrate` | Ejecutar migraciones |
+| `npm run db:migrate:undo` | Revertir todas las migraciones |
+| `npm run db:seed` | Ejecutar seeders |
 
 ### Frontend
 
@@ -1581,15 +1633,15 @@ git push origin main --tags
 - [ ] GEN-02: Variables de entorno
 - [ ] GEN-03: BD y migraciones
 - [ ] rq-01: Modelo Local
-- [ ] rq-02: Modelo Order + OrderItem
+- [ ] rq-02: Modelo Order + OrderItem + Product + Deliverer
 - [ ] Matriz con ≥5 requisitos
 - [ ] Tag `entrega-hito-1`
 
 ### Hito 2
-- [ ] GEN-04: Registro
-- [ ] GEN-05: Login JWT
+- [ ] GEN-04: Registro (backend + frontend)
+- [ ] GEN-05: Login JWT (backend + frontend)
 - [ ] GEN-06: Middleware auth
-- [ ] rq-03: CRUD Locales con UI
+- [ ] rq-03: CRUD Locales con UI (lista, crear, editar, desactivar)
 - [ ] rq-08: Dashboard pedidos activos
 - [ ] Matriz con ≥10 requisitos
 - [ ] Demo local (capturas/video)
@@ -1597,18 +1649,18 @@ git push origin main --tags
 
 ### Hito 3
 - [ ] GEN-07: Reset contraseña
-- [ ] GEN-08: Error handler
+- [ ] GEN-08: Error handler global
 - [ ] GEN-09: CRUD + UI completo
-- [ ] GEN-10: Validaciones HTTP
+- [ ] GEN-10: Validaciones HTTP (400, 422, 409)
 - [ ] GEN-11: Postman exportado
-- [ ] GEN-12: Migración extra
+- [ ] GEN-12: Migración extra documentada
 - [ ] GEN-13: Deploy Railway + Vercel
-- [ ] rq-04: CRUD Pedidos
-- [ ] rq-05: No cancelar en camino
-- [ ] rq-06: Total coherente
+- [ ] rq-04: CRUD Pedidos completo con UI
+- [ ] rq-05: No cancelar en_camino/entregado
+- [ ] rq-06: Total calculado automáticamente
 - [ ] rq-07: Filtros por estado/cliente
-- [ ] rq-09: Flujo crear pedido completo
-- [ ] rq-10: Asignar repartidor + ETA
+- [ ] rq-09: Flujo crear pedido (carrito → dirección → confirmar)
+- [ ] rq-10: Asignar repartidor + ETA simulado
 - [ ] Matriz 23/23
 - [ ] URLs producción en README
 - [ ] Tag `entrega-hito-3`

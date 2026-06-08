@@ -4,7 +4,9 @@ module.exports = (sequelize, DataTypes) => {
   class Order extends Model {
     static associate(models) {
       Order.belongsTo(models.User, { foreignKey: 'UserId' });
-      Order.belongsTo(models.Restaurant, { foreignKey: 'RestaurantId' });
+      Order.belongsTo(models.Local, { foreignKey: 'LocalId' });
+      Order.belongsTo(models.Deliverer, { foreignKey: 'DelivererId' });
+      Order.hasMany(models.OrderItem, { foreignKey: 'OrderId' });
     }
   }
   Order.init({
@@ -36,6 +38,9 @@ module.exports = (sequelize, DataTypes) => {
     },
     deliveredAt: {
       type: DataTypes.DATE
+    },
+    DelivererId: {
+      type: DataTypes.INTEGER
     }
   }, {
     sequelize,

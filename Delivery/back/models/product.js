@@ -1,13 +1,13 @@
 'use strict';
 const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class Restaurant extends Model {
+  class Product extends Model {
     static associate(models) {
-      Restaurant.belongsTo(models.User, { foreignKey: 'UserId' });
-      Restaurant.hasMany(models.Order, { foreignKey: 'RestaurantId' });
+      Product.belongsTo(models.Local, { foreignKey: 'LocalId' });
+      Product.hasMany(models.OrderItem, { foreignKey: 'ProductId', onDelete: 'CASCADE' });
     }
   }
-  Restaurant.init({
+  Product.init({
     name: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -16,27 +16,24 @@ module.exports = (sequelize, DataTypes) => {
     description: {
       type: DataTypes.TEXT
     },
-    address: {
-      type: DataTypes.STRING,
+    price: {
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-      validate: { notEmpty: true }
+      defaultValue: 0
     },
-    phone: {
-      type: DataTypes.STRING
+    stock: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
     },
     imageUrl: {
       type: DataTypes.STRING
     },
     category: {
       type: DataTypes.STRING
-    },
-    isActive: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true
     }
   }, {
     sequelize,
-    modelName: 'Restaurant',
+    modelName: 'Product',
   });
-  return Restaurant;
+  return Product;
 };
